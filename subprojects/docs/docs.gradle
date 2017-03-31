@@ -14,6 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+buildscript {
+    dependencies { classpath("org.gradle.gradle2kts:gradle2kts:0.0.1-SNAPSHOT") }
+    repositories { maven { url 'https://repo.gradle.org/gradle/libs-snapshots' } }
+}
+
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.build.docs.AssembleSamplesDocTask
 import org.gradle.build.docs.CacheableAsciidoctorTask
@@ -348,12 +353,25 @@ def userguideDocbook = tasks.register("userguideDocbook", UserGuideTransformTask
     dependsOn checkSectionIds
 }
 
+def ktsSamples = tasks.register("ktsSamples", org.gradle.gradle2kts.tasks.Gradle2Kts) {
+    dependsOn(samples)
+    sourceDir = samples.get().snippetsDir
+    destDir = new File(sourceDir.parentFile, 'snippets-kts')
+}
+
+def ktsUserGuideDocbook = tasks.register("ktsUserGuideDocbook", UserGuideTransformTask) {
+    dependsOn(ktsSamples)
+    destFile = new File(docbookSrc, 'ktsUserGuide.xml')
+    snippetsDir = ktsSamples.get().destDir
+    dependsOn checkSectionIds
+}
+
 // This is used for the PDF, where we need absolute links to the javadoc etc.
 def pdfUserguideDocbook = tasks.register("pdfUserguideDocbook", UserGuideTransformTask) {
     destFile = new File(docbookSrc, 'remoteUserguide.xml')
 }
 
-[userguideDocbook, pdfUserguideDocbook]*.configure {
+[userguideDocbook, ktsUserGuideDocbook, pdfUserguideDocbook]*.configure {
     // The master userguide.xml pulls these files in via xi:include, making them input
     includes = files(
         samplesDocbook.get(), // TODO: Manually unpacking, see https://github.com/gradle/gradle-native/issues/737
@@ -381,6 +399,16 @@ def userguideHtml = tasks.register("userguideHtml", Docbook2Xhtml) {
     stylesheetName = 'userGuideHtml.xsl'
     resources = resourceFiles
     ext.entryPoint = "$destDir/userguide.html"
+}
+
+def ktsUserGuideHtml = tasks.register("ktsUserGuideHtml", Docbook2Xhtml) {
+    group = "Documentation"
+    source ktsUserGuideDocbook
+    destDir = new File(userguideDir.parentFile, 'ktsUserGuide')
+    stylesheetName = 'userGuideHtml.xsl'
+    resources = resourceFiles
+    ext.entryPoint = "$destDir/userguide.html"
+    outputs.doNotCacheIf('Depends on the output of ktsUserGuideDocbook, which contains an ever changing version') { true }
 }
 
 def userguideSingleHtml = tasks.register("userguideSingleHtml", Docbook2Xhtml) {
