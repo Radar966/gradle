@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.attributes.AttributeContainer;
 import org.gradle.api.internal.attributes.AttributeContainerInternal;
@@ -57,6 +58,7 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
     private final ImmutableList<? extends ComponentVariant> variants;
     private final HashValue contentHash;
     private final ImmutableAttributes attributes;
+    private final ImmutableList<? extends ComponentIdentifier> plaftormOwners;
 
     // Configurations are built on-demand, but only once.
     private final Map<String, DefaultConfigurationMetadata> configurations = Maps.newHashMap();
@@ -75,6 +77,7 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
         attributesFactory = metadata.getAttributesFactory();
         attributes = extractAttributes(metadata);
         variants = metadata.getVariants();
+        plaftormOwners = metadata.getPlatformOwners() == null ? ImmutableList.<ComponentIdentifier>of() : ImmutableList.copyOf(metadata.getPlatformOwners());
     }
 
     private static ImmutableAttributes extractAttributes(AbstractMutableModuleComponentResolveMetadata metadata) {
@@ -98,6 +101,7 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
         attributesFactory = metadata.getAttributesFactory();
         attributes = metadata.attributes;
         variants = metadata.variants;
+        plaftormOwners = metadata.plaftormOwners;
     }
 
     /**
@@ -258,6 +262,11 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
     @Override
     public AttributeContainer getAttributes() {
         return attributes;
+    }
+
+    @Override
+    public ImmutableList<? extends ComponentIdentifier> getPlatformOwners() {
+        return plaftormOwners;
     }
 
     @Override
